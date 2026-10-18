@@ -1,0 +1,13 @@
+{
+  "description": "zooi.ai: what is due for this repository's product, at session start. Silent without a read token in ZOOI_READ_TOKEN.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          { "type": "command", "command": "node \"${PLUGIN_ROOT}/hooks/session-start.mjs\" --host=codex", "timeout": 10, "statusMessage": "Checking zooi.ai" }
+        ]
+      }
+    ]
+  }
+}

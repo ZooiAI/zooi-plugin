@@ -1,0 +1,24 @@
+{
+  "name": "zooi",
+  "version": "0.1.13",
+  "description": "Your agent as a growth team: zooi.ai keeps the product's memory, data, methods, rules and measurement; you approve, your agent does the work.",
+  "author": {
+    "name": "zooi.ai",
+    "url": "https://zooi.ai"
+  },
+  "homepage": "https://zooi.ai",
+  "keywords": [
+    "growth",
+    "marketing",
+    "measurement"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./mcp.json",
+  "interface": {
+    "displayName": "zooi.ai",
+    "shortDescription": "Your agent as a growth team, with memory, measurement and your approval.",
+    "developerName": "zooi.ai",
+    "websiteURL": "https://zooi.ai"
+  },
+  "hooks": "./hooks/codex.json"
+}

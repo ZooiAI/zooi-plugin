@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "zooi": {
+      "type": "streamable-http",
+      "url": "https://app.zooi.ai/mcp",
+      "extensions": {
+        "com.openai": {
+          "auth": { "type": "oauth", "client": { "mode": "dcr" } }
+        }
+      }
+    }
+  }
+}

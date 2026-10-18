@@ -1,0 +1,20 @@
+{
+  "name": "zooi",
+  "interface": {
+    "displayName": "zooi.ai"
+  },
+  "plugins": [
+    {
+      "name": "zooi",
+      "source": {
+        "source": "local",
+        "path": "./zooi"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

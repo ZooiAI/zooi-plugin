@@ -1,0 +1,15 @@
+{
+  "name": "zooi",
+  "description": "The zooi.ai plugin for Claude Code.",
+  "owner": {
+    "name": "zooi.ai",
+    "url": "https://zooi.ai"
+  },
+  "plugins": [
+    {
+      "name": "zooi",
+      "source": "./zooi",
+      "description": "Your agent as a growth team, with memory, measurement and your approval."
+    }
+  ]
+}

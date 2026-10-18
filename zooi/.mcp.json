@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "zooi": {
+      "type": "http",
+      "url": "https://app.zooi.ai/mcp"
+    }
+  }
+}
