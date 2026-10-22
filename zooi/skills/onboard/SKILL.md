@@ -10,7 +10,7 @@ The goal is a first useful result within minutes:
 - the repository linked to its product;
 - the profile facts proposed with sources;
 - an honest account of what a new user meets;
-- a first bet worth making.
+- a first campaign worth making.
 
 Everything you submit waits for the person.
 
@@ -56,7 +56,7 @@ Everything you submit waits for the person.
    - **To commit:** `.zooi/project.json` and the AGENTS.md section.
    - **Facts:** the candidates you proposed; the person accepts or edits them in zooi.ai, in the product's sources review.
    - **New-user findings:** the walkthrough's top three in plain words, and where you stopped.
-   - **Next:** the bet you would make first and why, in one paragraph. Offer `/zooi:plan` to submit it.
+   - **Next:** the campaign you would make first and why, in one paragraph. Offer `/zooi:plan` to submit it.
    - **Numbers:** keep the walkthrough's timings out of any plan, because zooi cannot check them; report them here instead.
 
 <!-- zooi:rules (kept identical in every core skill; node scripts/check-plugin.ts) -->
