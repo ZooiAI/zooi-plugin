@@ -62,14 +62,15 @@ zooi.ai tells you in the inbox when a run is due: the weekly run at the time you
 
 ## Session reminder (optional)
 
-The plugin can tell you what is due when a session starts, for example "a plan waits for your approval". It shows counts and dates only.
+The plugin can tell you what is due when a session starts, for example "a plan waits for your approval". It shows counts and dates only. It is **off by default**: the Agent OAuth connection does not enable it. `/zooi:onboard` (in Codex, `$zooi:onboard`) guides you through the following steps before handing over. Without this setup, reminders stay in the web inbox; zooi does not yet send reminder emails.
 
 1. Create a personal token with **read** access to the product in zooi.ai, under Settings → Personal tokens.
 2. Give it to your agent:
    - **Claude Code:** run `/plugin configure zooi@zooi` and paste the token into "Read-only token". It is kept in your system's secure storage.
    - **Codex:** set `ZOOI_READ_TOKEN` in the environment you start Codex from, then trust the zooi hook in `/hooks`.
+3. Start a new session in the linked repository. When there are due items, check that the session-start message shows their counts and an inbox link. It stays silent when nothing is due, so silence alone does not confirm the setup worked.
 
-The token goes only to your configured zooi.ai address, and only for repositories whose `.zooi/project.json` names that address.
+Enter the secret privately in your host's configuration, never in the conversation, a committed file or shell history. The token goes only to your configured zooi.ai address, and only for repositories whose `.zooi/project.json` names that address. Renew it when it expires. The reminder requires you to open the agent; for optional scheduling when you do not, see [SCHEDULING.md](SCHEDULING.md).
 
 ## What your agent never does
 

@@ -52,11 +52,18 @@ Everything you submit waits for the person.
      - For a page, cite `{ "web_page": { "url" } }`.
    - **Numbers:** every number in a value must appear in the cited text.
    - On a refusal, fix what `reason.code` names and submit again with a new key.
-9. **Hand over.**
+9. **Guide the person through the session reminder.** It is off by default: installing the plugin or authorizing its Agent connection does not enable it. zooi currently sends run requests and approval reminders to the inbox, not email. Before handing over, explain this and give these steps, using the `endpoint` from `list_products`:
+   - Open `{endpoint}/settings/tokens`. The person creates a **Read** personal token for this product, with an expiry they choose. Creating the token is their decision; never create it for them or ask them to paste its secret into the conversation.
+   - **Claude Code:** the person runs `/plugin configure zooi@zooi` and enters the token in **Read-only token**, in the host's secure configuration.
+   - **Codex:** the person sets `ZOOI_READ_TOKEN` privately in the environment they launch Codex from, then trusts the zooi hook in `/hooks`. Never put the secret in a command you run, a project file or shell history.
+   - **Verify:** start a new session in this linked repository. If `get_due_summary` reports due items, the session-start message should show counts and the inbox link. No due items means silence; silence alone does not prove setup succeeded. Never claim the reminder is configured without the person's confirmation or an observed message.
+   - The reminder only runs when an agent session starts, and the token expires. If the person wants runs even when they do not open the agent, point to `../../../SCHEDULING.md` in this package for optional host or local scheduling. Do not install a scheduler on their behalf unless they ask. If they decline setup, say **session reminder not enabled** in the hand-over.
+10. **Hand over.**
    - **To commit:** `.zooi/project.json` and the AGENTS.md section.
    - **Facts:** the candidates you proposed; the person accepts or edits them in zooi.ai, in the product's sources review.
    - **New-user findings:** the walkthrough's top three in plain words, and where you stopped.
    - **Next:** the campaign you would make first and why, in one paragraph. Offer `/zooi:plan` to submit it.
+   - **Reminder:** whether it was verified, still needs configuration or was declined; include the token settings link and the next step when it is not ready.
    - **Numbers:** keep the walkthrough's timings out of any plan, because zooi cannot check them; report them here instead.
 
 <!-- zooi:rules (kept identical in every core skill; node scripts/check-plugin.ts) -->
