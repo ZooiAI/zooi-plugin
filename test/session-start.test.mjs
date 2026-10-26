@@ -69,6 +69,8 @@ test("reads the answer as one server-sent event too, as the Workers runtime send
 
 test("Codex gets its own command; nothing due, a refusal or a failure stay silent", async () => {
   assert.match(format(summary([{ code: "work_orders_ready", count: 1, due_at: null }]), "codex", NOW).systemMessage, /1 approved work order is ready\. Run \$zooi:run/);
+  assert.match(format(summary([{ code: "fact_candidates_awaiting_review", count: 2, due_at: null }, { code: "facts_stale", count: 1, due_at: null }]), "claude", NOW).systemMessage, /2 proposed facts wait for your review; 1 fact needs review after a source changed\./);
+  assert.equal(format(summary([{ code: "a_later_code", count: 1, due_at: null }]), "claude", NOW), null, "a code this version does not know stays silent");
   assert.equal(format(summary([]), "claude", NOW), null);
   const refused = fakeFetch({ jsonrpc: "2.0", id: 1, result: { isError: true, structuredContent: { error: { code: "not_found" } } } });
   assert.equal(await main({ env: { ZOOI_READ_TOKEN: "t" }, args: [], input: { cwd: linked() }, fetch: refused.fetch }), null);

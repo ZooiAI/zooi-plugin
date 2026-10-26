@@ -108,6 +108,8 @@ const PHRASES = {
   work_order_needs_person: (n) => `${plural(n, "work order needs", "work orders need")} you`,
   work_orders_ready: (n, due) => `${plural(n, "approved work order is", "approved work orders are")} ready${due}`,
   readings_due: (n) => `${plural(n, "reading is", "readings are")} due`,
+  fact_candidates_awaiting_review: (n) => `${plural(n, "proposed fact waits", "proposed facts wait")} for your review`,
+  facts_stale: (n) => `${plural(n, "fact needs", "facts need")} review after a source changed`,
 };
 
 /** The hook's answer: a line for the person, and the codes for the agent. Null when nothing is due. */

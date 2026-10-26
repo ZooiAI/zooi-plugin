@@ -45,12 +45,13 @@ these instructions for your agent.
 
 ## Run
 
-In the inbox's run notice, or on the Agent page, click **Run with Claude Code**
-or **Run with Codex**. Allow the browser to open zooi.ai. The first run may
-also require macOS permission to control Terminal. The initial skill prompt
-is sent automatically; login, repository trust and tool approvals may still
-need your input. Existing plan approvals and reading confirmations stay in
-zooi, and the agent reports progress through MCP as usual.
+In the inbox's run notice, or under Settings → your product → Agent and runs,
+click **Run with Claude Code** or **Run with Codex**. Allow the browser to
+open zooi.ai. The first run may also require macOS permission to control
+Terminal. The initial skill prompt is sent automatically; login, repository
+trust and tool approvals may still need your input. Existing plan approvals
+and reading confirmations stay in zooi, and the agent reports progress through
+MCP as usual.
 
 The CLI runs interactively. Exit that session before starting another run
 for the same product in the same repository. Repeated clicks cannot start a

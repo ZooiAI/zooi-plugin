@@ -35,10 +35,15 @@ from its extracted local folder instead of the Git source below.
    codex plugin add zooi@zooi
    ```
 
-2. Start Codex in your product's repository. Open `/mcp` and authenticate the
-   zooi connection if requested. Complete the browser sign-in and consent
-   described above, choosing **Agent** and your product.
-3. Run `$zooi:onboard`.
+2. Authenticate the zooi connection in a terminal:
+
+   ```bash
+   codex mcp login zooi
+   ```
+
+   Complete the browser sign-in and consent described above, choosing
+   **Agent** and your product.
+3. Start Codex in your product's repository and run `$zooi:onboard`.
 
 ## Every week
 
@@ -53,7 +58,7 @@ inbox with one click. Your agent then works in this order:
 
 Anything that needs you appears in your zooi.ai inbox, and your agent gives you the link. To do one part only, use `/zooi:plan`, `/zooi:do` or `/zooi:review`.
 
-zooi.ai tells you in the inbox when a run is due: the weekly run at the time you set on the Agent page, and off-cycle runs for what cannot wait. To have your agent's scheduler or your computer's start the run for you, see [SCHEDULING.md](SCHEDULING.md).
+zooi.ai tells you in the inbox when a run is due: the weekly run at the time you set under Settings → your product → Agent and runs, and off-cycle runs for what cannot wait. To have your agent's scheduler or your computer's start the run for you, see [SCHEDULING.md](SCHEDULING.md).
 
 ## Session reminder (optional)
 

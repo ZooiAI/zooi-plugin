@@ -10,22 +10,28 @@ One pass over everything that is due, in zooi's order (design: interrupted work 
 ## Steps
 
 1. **Read what is due.** Call `get_due` with the `product_id`. Everything below works from this answer; call it again after a step changes the state.
-   - `run_requests` lists the runs zooi asks for, the nearest deadline first, each with its `kind` and reason codes. Take the first one that is `open` and call `report_run_request` with `status: "started"`; if it is already started by another connection (`run_request_taken`), stop and tell the person another run is under way.
-   - No request open: run anyway when the person asked you to; there is just nothing to report.
+   - `run_requests` lists the runs zooi asks for, the nearest deadline first, each with its `kind`, `status` and reason codes. A weekly request and an off-cycle one can be open together, and this run answers all of them: call `report_run_request` with `status: "started"` for each one. Starting again from the same connection is the same start, so a request an earlier run of yours left `started` is yours to finish.
+   - `run_request_taken`: another connection is running that request. Leave it to that run and name it in the hand-over; if every request comes back taken, stop and tell the person another run is under way. `run_request_closed`: it passed its deadline; drop it.
+   - No request: run anyway when the person asked you to; there is just nothing to report.
 2. **Interrupted work first.**
    - A work order with a `review_url`, after a failed or lost run or a lapsed approval, waits for the person. Collect its link for the hand-over; do not claim it.
    - A run with `claimed_by_you` that is still `working`: finish it now with `/zooi:do` if you still have the change, or report it `failed` with the reason. Never start it again from scratch.
 3. **Approved work.** For each work order you may claim (status `approved`, no `review_url`, no run), follow `/zooi:do`. Do them one after another.
-4. **Planning.** Pass the run request's `run_request_id` to `/zooi:plan`.
-   - **Weekly request** (`kind: "weekly"`): plan the week, unless a weekly plan already waits for the person (`pending_plan`): then collect its `review_url` instead.
-   - **Off-cycle request** (`time_sensitive`, `release`, `guardrail`): plan only what its reasons name and cannot wait, such as the discussion in a `discussion_expiring` reason, or the release in a `release_published` reason (its tag, name and link are in `releases`; plan how the people who need it hear about it). That is an addendum: it never replaces the weekly plan, so a waiting `pending_plan` does not stop it; a waiting `pending_addendum` does.
+4. **Planning.** Answer each request you started: pass its `run_request_id` to `/zooi:plan`. Write the addendum first, since it cannot wait, then the weekly plan.
+   - **Off-cycle request** (`time_sensitive`, `release`, `guardrail`): plan only what its reasons name and cannot wait, such as the discussion in a `discussion_expiring` reason, or the release in a `release_published` reason (its tag, name and link are in `releases`; plan how the people who need it hear about it). That is an addendum: it never replaces the weekly plan, so a waiting `pending_plan` does not stop it; a waiting `pending_addendum` does. A newer addendum replaces a waiting one, so when you started two off-cycle requests, write one addendum for both: pass the nearest deadline's `run_request_id` and cover the other's reasons too.
+   - **Weekly request** (`kind: "weekly"`): plan the week, unless a weekly plan already waits for the person (`pending_plan`): then collect its `review_url` instead. Reasons that joined it before it started (`release_published`, `discussion_expiring`) belong in the weekly plan; when one already waits, name them in the hand-over.
+   - **Both in one run:** the weekly plan leaves out the addendum's attribution units and fits in the minutes the addendum leaves. `capacity.remaining_minutes` does not count a plan still waiting for the person, and approval checks capacity again.
    - **No request:** plan only when the person asks.
 5. **Readings.** When `readings_due` is not empty, follow `/zooi:review`.
-6. **Report the run.** If you started a run request, call `report_run_request` with `status: "completed"` and an `outcome`: the `plan_id` you submitted, if any, `work_orders_delivered`, `readings_drafted`, and `skipped` codes for what you left: `plan_waiting_for_person`, `work_needs_person`, `repository_unavailable`, `nothing_due`, `connection_missing`, `other`. A request never started is recorded as missed, so report even when there was nothing to do.
+6. **Report every request you started.** Call `report_run_request` with `status: "completed"` for each one, with its own `outcome`:
+   - `plan_id`: the plan that answers it, if any (the weekly plan for the weekly request, the addendum for an off-cycle one).
+   - `skipped`: codes for what you left of it: `plan_waiting_for_person`, `work_needs_person`, `repository_unavailable`, `nothing_due`, `connection_missing`, `other`.
+   - `work_orders_delivered` and `readings_drafted` count the run's work once: on the weekly request, or on the first request when none is weekly; 0 on the others.
+   - A request never started is recorded as missed, and one left started expires at its deadline, so report each even when there was nothing to do.
 7. **Hand over.** In a few lines:
-   - **Done:** pull requests opened, a plan submitted or applied, readings drafted.
+   - **Done:** pull requests opened, plans submitted or applied, readings drafted.
    - **Waiting for the person:** each item with its `review_url`, and that readings are confirmed in zooi.ai.
-   - **Skipped:** anything you skipped and why.
+   - **Skipped:** anything you skipped and why, and any request another run holds.
 
 If zooi is unreachable or the connection is not authorized, stop and say so: the person reconnects the `zooi` server (in Claude Code, `/mcp`). Do nothing that needs zooi without it.
 
