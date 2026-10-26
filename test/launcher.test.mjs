@@ -27,13 +27,29 @@ test("install binds exact product and origin, pins executables, and keeps its ca
   const f = fixture(t), p = f.result.pairing;
   assert.equal(p.schema, "zooi.launcher/1"); assert.equal(p.product_id, "prd_test");
   assert.deepEqual(p.hosts, ["claude", "codex"]);
-  assert.equal(new URL(f.result.url).pathname, "/agent");
+  assert.equal(new URL(f.result.url).pathname, "/settings/products/prd_test/agent");
   assert.deepEqual(JSON.parse(decodeURIComponent(new URL(f.result.url).hash.slice("#zooi-launcher=".length))), p);
   assert.equal(statSync(join(f.root, "bindings.json")).mode & 0o777, 0o600);
   assert.equal(statSync(f.root).mode & 0o777, 0o700);
   assert.equal(authorize(f.href(), f.root).binding.commands.codex, join(f.bin, "codex"));
   assert.deepEqual(f.registered.map((x) => x.script), [join(f.root, "launcher.mjs")]);
   assert.doesNotMatch(JSON.stringify(p), /repo with|commands|PATH/);
+});
+
+test("setup return markers stay in the browser fragment and never become launcher authority", (t) => {
+  const f = fixture(t);
+  const setupId = "a".repeat(32);
+  const result = install({ ...f.options, setupId, host: "codex" });
+  const url = new URL(result.url);
+  assert.equal(url.search, "");
+  const params = new URLSearchParams(url.hash.slice(1));
+  assert.equal(params.get("setup"), setupId);
+  assert.deepEqual(JSON.parse(params.get("zooi-launcher")), result.pairing);
+  assert.deepEqual(result.pairing.hosts, ["codex"]);
+  assert.ok(!readFileSync(join(f.root, "bindings.json"), "utf8").includes(setupId));
+  for (const setupId of ["", "x".repeat(32), "a&key=bad", "../run", "a".repeat(33)]) {
+    assert.throws(() => install({ ...f.options, setupId }), /launcher_setup_invalid/);
+  }
 });
 
 test("unknown capabilities, extra arguments, duplicate parameters, arbitrary URLs and hosts cannot launch", (t) => {

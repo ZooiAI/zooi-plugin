@@ -80,8 +80,9 @@ export function registerApp({ node, script, app, exec = execFileSync }) {
 }
 
 /** Installation is explicit. Re-pairing rotates the capability, invalidating old browser links. */
-export function install({ dir, webOrigin, host, root = LAUNCHER_ROOT, app = APP, platform = process.platform, env = process.env, register = registerApp } = {}) {
+export function install({ dir, webOrigin, host, setupId, root = LAUNCHER_ROOT, app = APP, platform = process.platform, env = process.env, register = registerApp } = {}) {
   if (platform !== "darwin") fail("launcher_macos_required");
+  if (setupId !== undefined && !ID.test(setupId)) fail("launcher_setup_invalid");
   const repository = realpathSync(resolve(dir ?? process.cwd()));
   const link = project(repository);
   const web = origin(webOrigin ?? link.endpoint);
@@ -101,7 +102,7 @@ export function install({ dir, webOrigin, host, root = LAUNCHER_ROOT, app = APP,
   register({ node: process.execPath, script: installedScript, app });
   save(root, { ...current, bindings: [...current.bindings.filter((entry) => entry.id !== binding.id), binding] });
   const pairing = { schema: "zooi.launcher/1", id: binding.id, key: binding.key, product_id: binding.product_id, origin: web, hosts: Object.keys(commands) };
-  return { pairing, url: `${web}/agent?product=${encodeURIComponent(link.product_id)}#zooi-launcher=${encodeURIComponent(JSON.stringify(pairing))}` };
+  return { pairing, url: `${web}/settings/products/${encodeURIComponent(link.product_id)}/agent#zooi-launcher=${encodeURIComponent(JSON.stringify(pairing))}${setupId ? `&setup=${setupId}` : ""}` };
 }
 
 /** A link carries only a paired capability and a host. Paths, prompts, flags and endpoints are rejected. */
@@ -203,7 +204,7 @@ export async function runBinding(id, host, { root = LAUNCHER_ROOT, run = spawn, 
 export function presentPairing(result, { root = LAUNCHER_ROOT, open = (url) => execFileSync("/usr/bin/open", [url], { stdio: "pipe" }), log = console.log } = {}) {
   const codeFile = join(root, `pairing-${result.pairing.id}.json`);
   writeFileSync(codeFile, `${JSON.stringify(result.pairing)}\n`, { mode: 0o600 });
-  log(`zooi: installed. Save the pairing in Agent → Run from this browser. If the browser does not open, open ${codeFile} yourself and paste its contents. Do not read this file through your agent.`);
+  log(`zooi: installed. Return to the browser that requested setup to finish pairing in Agent and runs. If the browser does not open, open ${codeFile} yourself and paste its contents. Do not read this file through your agent.`);
   // The fragment stays in the browser; it is not sent to the web server.
   open(result.url);
 }
@@ -211,9 +212,9 @@ export function presentPairing(result, { root = LAUNCHER_ROOT, open = (url) => e
 export async function main(args = process.argv.slice(2)) {
   const [action, ...rest] = args;
   if (action === "install") {
-    if (rest.length % 2 || rest.some((value, i) => i % 2 === 0 && !["--dir", "--web-origin", "--host"].includes(value))) fail("launcher_options_invalid");
+    if (rest.length % 2 || rest.some((value, i) => i % 2 === 0 && !["--dir", "--web-origin", "--host", "--setup-id"].includes(value)) || new Set(rest.filter((_, i) => i % 2 === 0)).size !== rest.length / 2) fail("launcher_options_invalid");
     const options = Object.fromEntries(Array.from({ length: rest.length / 2 }, (_, i) => [rest[i * 2], rest[i * 2 + 1]]));
-    const result = install({ dir: options["--dir"], webOrigin: options["--web-origin"], host: options["--host"] });
+    const result = install({ dir: options["--dir"], webOrigin: options["--web-origin"], host: options["--host"], setupId: options["--setup-id"] });
     presentPairing(result);
     return 0;
   }

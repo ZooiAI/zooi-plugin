@@ -33,15 +33,20 @@ endpoint. Do not run a growth task as part of installation.
 The installer creates `~/Applications/zooi.ai Launcher.app`, registers
 `zooi://`, and saves its private runtime and bindings under
 `~/Library/Application Support/zooi/launcher/`. It opens your product's
-**Agent → Run from this browser** page with the pairing code pre-filled.
-Click **Save pairing**. If the page did not open, open the private pairing file
+**Agent and runs** settings. When setup began with **Copy for Claude Code** or
+**Copy for Codex** in that browser, pass the prompt's `--setup-id <marker>` to
+the installer. The matching browser saves the pairing automatically within
+30 minutes. Otherwise click **Enable one-click runs**. The marker is a return
+address, not a launch capability. With an older installer that has no
+`--setup-id`, omit the option and confirm in the browser once.
+If the page did not open, open the private pairing file
 named by the installer yourself and paste its contents. The installer never
 prints the code, and an agent must not read that file: the capability must not
 enter model context. Keep it private; it permits starting runs for this product.
 
 Installation and pairing do not launch a growth run. They do not change the
-CLI's permissions. The web page's **Copy setup instructions** button prepares
-these instructions for your agent.
+CLI's permissions. The web page's copy buttons prepare a complete prompt for
+plugin installation, MCP sign-in, repository linking and launcher setup.
 
 ## Run
 
@@ -75,7 +80,7 @@ node "$HOME/Library/Application Support/zooi/launcher/launcher.mjs" uninstall
 
 Removing the pairing on the web clears only that browser's copy. Run the
 installer again to rotate its key, update the runtime, change the selected
-CLIs or rebind a moved/relinked repository; then save the new browser pairing.
+CLIs or rebind a moved/relinked repository; then complete the new browser pairing.
 Removing the launcher does not stop an existing CLI session or revoke MCP.
 
 **Scope of this release:** macOS only. Windows and Linux can continue to use

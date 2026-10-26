@@ -12,8 +12,15 @@ real absolute directory and the installed CLI paths, and creates a random
 (`zooi.launcher_state/1`, file mode 0600, parent 0700) holds that mapping.
 
 The browser receives only this object, encoded in the fragment of its Agent
-page URL. Fragments are not sent to the web server. The page pre-fills the
-pairing form and clears the fragment; the person saves it explicitly.
+page URL. Fragments are not sent to the web server. The page clears the
+fragment immediately. Copying a setup prompt first creates a random, one-use
+128-bit setup marker in that person's browser, scoped to workspace, person
+and product, valid for 30 minutes. The installer accepts `--setup-id <marker>`
+and returns it as `&setup=<marker>` in the same fragment, outside the pairing
+object. A valid pairing with a matching, unexpired marker is saved automatically
+and consumes the marker. The marker is not a launch capability and may appear
+in the setup prompt; it never enters launcher state or launch URLs. Unsolicited,
+expired and older installer returns require the person's explicit confirmation.
 
 ```json
 {
