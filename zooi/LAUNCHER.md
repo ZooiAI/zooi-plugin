@@ -58,6 +58,14 @@ trust and tool approvals may still need your input. Existing plan approvals
 and reading confirmations stay in zooi, and the agent reports progress through
 MCP as usual.
 
+An approved action also offers **Execute with Codex** or **Execute with Claude
+Code**. These start only that work order through the `do` skill, instead of a
+whole-product run. The action stays **Approved, waiting for an agent to claim**
+until the agent claims it through MCP. Its actual engine, runtime and latest
+report then appear on the action. Existing installations may need a plugin
+update and launcher reinstallation/pairing to enable single-action launches;
+the page offers that setup and a copyable task in the meantime.
+
 The CLI runs interactively. Exit that session before starting another run
 for the same product in the same repository. Repeated clicks cannot start a
 second agent, including when you choose the other CLI. The browser cannot

@@ -42,25 +42,35 @@ to zooi; the CLI still needs its own authenticated MCP connection.
 
 ## Launch
 
-`zooi://run/<id>?key=<capability>&host=claude|codex`
+`zooi://run/<id>?key=<capability>&host=claude|codex[&work_order=wko_…]`
+
+New installers add `"work_orders": true` to the pairing object. Browsers accept
+old pairings for whole-product runs; a single-action launch requires this flag.
+An older launcher is updated and paired again, never silently given a general
+run when the person requested one action. `work_order` is optional, appears at
+most once, and matches `^wko_[a-z0-9]{1,64}$`; it is only an object identifier,
+never a prompt. The agent still reads and claims that order through MCP, whose
+product scope, approval, authorship and lease checks remain authoritative.
 
 No other or repeated parameters, credentials, port, path segments or fragment
 are accepted. A URL cannot set an endpoint, path, command, prompt or permission
 flag. The launcher checks the capability in constant time, the host binding,
 the canonical repository path, and the product and endpoint in its current
 root `.zooi/project.json` before opening Terminal. Terminal receives only the
-local binding id and host; the capability and incoming URL never appear in
+local binding id, host and optional validated work order id; the capability and incoming URL never appear in
 its command, the agent's environment, or its prompt.
 
 The launcher passes `/zooi:run` to interactive `claude` or `$zooi:run` to
-interactive `codex --sandbox workspace-write`, as an initial prompt, without
+interactive `codex --sandbox workspace-write` (or the fixed `zooi:do` skill
+with the validated work order id for a single-action launch), as an initial prompt, without
 a shell between the launcher and CLI. Existing CLI permission and login
 settings apply. The reminder's optional read token is removed from the
 environment. A local exclusive lock lasts for the CLI session, across both
 hosts and different browser origins. The CLI's exit code is preserved.
 
 Requesting a launch is not proof the app opened or the run started. The web
-UI waits for the agent's normal MCP `report_run_request` updates.
+UI waits for the agent's normal MCP `report_run_request` updates, or
+`claim_work_order` and `report_run` for an individual action.
 
 ## Revocation and recovery
 

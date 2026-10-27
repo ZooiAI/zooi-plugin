@@ -119,6 +119,35 @@ test("interactive CLI starts immediately with the fixed skill and the person's e
   assert.deepEqual(readdirSync(join(f.root, "locks")), []);
 });
 
+test("an action launch selects only the do skill and validated work order in either CLI", async (t) => {
+  const f = fixture(t), started = [];
+  assert.equal(f.result.pairing.work_orders, true);
+  const workOrderId = "wko_test123";
+  const run = (command, args, options) => {
+    started.push({ command, args, options });
+    const child = new EventEmitter();
+    queueMicrotask(() => child.emit("exit", 0));
+    return child;
+  };
+  for (const host of ["codex", "claude"]) {
+    const url = `${f.href(host)}&work_order=${workOrderId}`;
+    assert.equal(authorize(url, f.root).workOrderId, workOrderId);
+    const calls = [];
+    openUrl(url, { root: f.root, exec: (...args) => calls.push(args) });
+    assert.ok(calls[0][2].input.includes(workOrderId));
+    assert.ok(!calls[0][2].input.includes(f.result.pairing.key));
+    await runBinding(f.result.pairing.id, host, { root: f.root, run, workOrderId });
+  }
+  assert.deepEqual(started[0].args, ["--sandbox", "workspace-write", `$zooi:do ${workOrderId}`]);
+  assert.deepEqual(started[1].args, [`/zooi:do ${workOrderId}`]);
+  assert.ok(started.every(({ options }) => options.cwd === f.dir && options.shell === false));
+  for (const id of ["", "wko_x /zooi:run", "wko_$(id)", "../test", "act_test"]) {
+    assert.throws(() => authorize(`${f.href()}&work_order=${encodeURIComponent(id)}`, f.root), /launcher_work_order_invalid/);
+    await assert.rejects(runBinding(f.result.pairing.id, "codex", { root: f.root, run: () => assert.fail("must not spawn"), workOrderId: id }), /launcher_work_order_invalid/);
+  }
+  assert.throws(() => authorize(`${f.href()}&work_order=wko_a&work_order=wko_b`, f.root), /launcher_url_invalid/);
+});
+
 test("simultaneous clicks, even across hosts and website origins, never start a second CLI", async (t) => {
   const f = fixture(t);
   const second = install({ ...f.options, webOrigin: "http://127.0.0.1:5180" }).pairing;
@@ -158,6 +187,13 @@ test("the actual child receives the fixed prompt without shell expansion", async
   assert.equal(await runBinding(f.result.pairing.id, "codex", { root: f.root }), 0);
   const result = JSON.parse(execFileSync(process.execPath, ["-e", "process.stdout.write(require('node:fs').readFileSync(process.argv[1],'utf8'))", output], { encoding: "utf8" }));
   assert.deepEqual(result, { args: ["--sandbox", "workspace-write", "$zooi:run"], cwd: f.dir });
+  for (const host of ["codex", "claude"]) {
+    writeFileSync(join(f.bin, host), readFileSync(join(f.bin, "codex")));
+    await runBinding(f.result.pairing.id, host, { root: f.root, workOrderId: "wko_target123" });
+    const targeted = JSON.parse(readFileSync(output, "utf8"));
+    assert.deepEqual(targeted.args, host === "codex" ? ["--sandbox", "workspace-write", "$zooi:do wko_target123"] : ["/zooi:do wko_target123"]);
+    assert.equal(targeted.cwd, f.dir);
+  }
 });
 
 test("macOS compiles the real URL handler with quoted paths and a valid URL scheme plist", { skip: process.platform !== "darwin" }, (t) => {
