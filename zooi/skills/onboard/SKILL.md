@@ -23,6 +23,7 @@ Everything you submit waits for the person.
    - **`.zooi/project.json` exists:** its `product_id` must be in the list, and its `endpoint` must equal the answer's `endpoint`. Otherwise stop and show the mismatch.
    - **It is missing:** match `git remote get-url origin` to each product's `repository` by owner and name, ignoring case. One match: propose it. Otherwise: show the person the products by name and website, and ask which one this repository is. Never guess.
    - **Then write** `.zooi/project.json`: `{ "schema": "zooi.project/1", "product_id": …, "endpoint": … }`, nothing else.
+   - **No repository:** a product can be an account the person grows, such as an X or TikTok profile (its `url` is the profile). Work in the folder the person chose for it, ask which product it is by name, and write the same file there. zooi does not read social profiles and accepts only citable sources, so skip steps 5 to 8 for it: ask the person to describe the account in the product's profile on zooi.ai, then offer `/zooi:connect` for its followers and other numbers.
 3. **Add the AGENTS.md section.**
    - Take the template at `../../templates/AGENTS.md`, relative to this skill's folder.
    - If the repository's `AGENTS.md` has no `## zooi.ai` section yet, append it, creating the file if needed.
@@ -63,6 +64,7 @@ Everything you submit waits for the person.
    - **Facts:** the candidates you proposed; the person accepts or edits them in zooi.ai, in the product's sources review.
    - **New-user findings:** the walkthrough's top three in plain words, and where you stopped.
    - **Next:** the campaign you would make first and why, in one paragraph. Offer `/zooi:plan` to submit it.
+   - **Data:** zooi now recommends the data this kind of product needs, and the inbox shows it as a data setup item. Call `get_data_setup`, name the required needs without a metric, and offer `/zooi:connect` (in Codex, `$zooi:connect`) to connect them; the person's own steps (sign-ups, keys) are part of it.
    - **Reminder:** whether it was verified, still needs configuration or was declined; include the token settings link and the next step when it is not ready.
    - **Numbers:** keep the walkthrough's timings out of any plan, because zooi cannot check them; report them here instead.
 

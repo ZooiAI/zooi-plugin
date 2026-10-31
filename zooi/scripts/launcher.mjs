@@ -7,7 +7,7 @@ import { accessSync, chmodSync, constants, copyFileSync, existsSync, linkSync, m
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { agentCommand, agentEnv } from "./agent-command.mjs";
+import { agentCommand, agentEnv, TASK_SKILLS } from "./agent-command.mjs";
 
 const LAUNCHER_ROOT = join(homedir(), "Library", "Application Support", "zooi", "launcher");
 const APP = join(homedir(), "Applications", "zooi.ai Launcher.app");
@@ -101,26 +101,28 @@ export function install({ dir, webOrigin, host, setupId, root = LAUNCHER_ROOT, a
   const binding = { id: previous?.id ?? randomBytes(16).toString("hex"), key: randomBytes(32).toString("hex"), ...link, origin: web, dir: repository, commands };
   register({ node: process.execPath, script: installedScript, app });
   save(root, { ...current, bindings: [...current.bindings.filter((entry) => entry.id !== binding.id), binding] });
-  const pairing = { schema: "zooi.launcher/1", id: binding.id, key: binding.key, product_id: binding.product_id, origin: web, hosts: Object.keys(commands), work_orders: true };
+  const pairing = { schema: "zooi.launcher/1", id: binding.id, key: binding.key, product_id: binding.product_id, origin: web, hosts: Object.keys(commands), work_orders: true, tasks: Object.keys(TASK_SKILLS) };
   return { pairing, url: `${web}/settings/products/${encodeURIComponent(link.product_id)}/agent#zooi-launcher=${encodeURIComponent(JSON.stringify(pairing))}${setupId ? `&setup=${setupId}` : ""}` };
 }
 
-/** Only a paired capability, host and optional work order id. No paths, prompts, flags or endpoints. */
+/** Only a paired capability, host and an optional work order id or fixed task name. No paths, prompts, flags or endpoints. */
 export function authorize(value, root = LAUNCHER_ROOT) {
   if (typeof value !== "string" || value.length > 1024 || !/^zooi:\/\/run\/[a-f0-9]{32}\?[^#\s]+$/.test(value)) fail("launcher_url_invalid");
   const url = new URL(value);
   const keys = [...url.searchParams.keys()].sort();
   const id = url.pathname.slice(1);
-  if (url.protocol !== "zooi:" || url.hostname !== "run" || url.username || url.password || url.port || url.hash || !ID.test(id) || !["host,key", "host,key,work_order"].includes(keys.join(","))) fail("launcher_url_invalid");
+  if (url.protocol !== "zooi:" || url.hostname !== "run" || url.username || url.password || url.port || url.hash || !ID.test(id) || !["host,key", "host,key,work_order", "host,key,task"].includes(keys.join(","))) fail("launcher_url_invalid");
   const key = url.searchParams.get("key");
   const host = url.searchParams.get("host");
   const workOrderId = url.searchParams.get("work_order") ?? undefined;
   if (workOrderId !== undefined && !/^wko_[a-z0-9]{1,64}$/.test(workOrderId)) fail("launcher_work_order_invalid");
+  const task = url.searchParams.get("task") ?? undefined;
+  if (task !== undefined && !Object.hasOwn(TASK_SKILLS, task)) fail("launcher_task_invalid");
   if (!KEY.test(key ?? "") || !HOSTS.includes(host)) fail("launcher_url_invalid");
   const binding = state(root).bindings.find((entry) => entry.id === id);
   if (!binding || !KEY.test(binding.key) || !timingSafeEqual(Buffer.from(binding.key, "hex"), Buffer.from(key, "hex")) || !binding.commands[host]) fail("launcher_pairing_invalid");
   verifyProject(binding);
-  return { binding, host, workOrderId };
+  return { binding, host, workOrderId, task };
 }
 
 function verifyProject(binding) {
@@ -131,8 +133,8 @@ function verifyProject(binding) {
 
 /** Terminal receives the local binding id and host, never the capability or any external text. */
 export function openUrl(value, { root = LAUNCHER_ROOT, exec = execFileSync } = {}) {
-  const { binding, host, workOrderId } = authorize(value, root);
-  const command = [process.execPath, join(root, "launcher.mjs"), "run", binding.id, host, ...(workOrderId ? [workOrderId] : [])].map(shellQuote).join(" ");
+  const { binding, host, workOrderId, task } = authorize(value, root);
+  const command = [process.execPath, join(root, "launcher.mjs"), "run", binding.id, host, ...(workOrderId ? [workOrderId] : task ? [task] : [])].map(shellQuote).join(" ");
   exec("/usr/bin/osascript", ["-"], { input: `tell application "Terminal"\n  activate\n  do script ${appleQuote(command)}\nend tell\n`, stdio: ["pipe", "pipe", "pipe"] });
 }
 
@@ -176,15 +178,16 @@ export function unlock(dir, { root = LAUNCHER_ROOT, isAlive = alive } = {}) {
   rmSync(file);
 }
 
-export async function runBinding(id, host, { root = LAUNCHER_ROOT, run = spawn, env = process.env, isAlive = alive, workOrderId } = {}) {
+export async function runBinding(id, host, { root = LAUNCHER_ROOT, run = spawn, env = process.env, isAlive = alive, workOrderId, task } = {}) {
   if (!ID.test(id) || !HOSTS.includes(host)) fail("launcher_pairing_invalid");
   if (workOrderId !== undefined && !/^wko_[a-z0-9]{1,64}$/.test(workOrderId)) fail("launcher_work_order_invalid");
+  if (task !== undefined && (workOrderId !== undefined || !Object.hasOwn(TASK_SKILLS, task))) fail("launcher_task_invalid");
   const binding = state(root).bindings.find((entry) => entry.id === id);
   if (!binding?.commands[host]) fail("launcher_pairing_invalid");
   verifyProject(binding);
   const held = lock(binding, root, isAlive);
   try {
-    const { args } = agentCommand(host, [], { interactive: true, workOrderId });
+    const { args } = agentCommand(host, [], { interactive: true, workOrderId, task });
     // Preserve the user's infrastructure PATH, but never let a project select the CLI.
     return await new Promise((resolveRun, reject) => {
       const child = run(binding.commands[host], args, { cwd: binding.dir, env: agentEnv(env), shell: false, stdio: "inherit" });
@@ -222,7 +225,7 @@ export async function main(args = process.argv.slice(2)) {
     return 0;
   }
   if (action === "open-url" && rest.length === 1) { openUrl(rest[0]); return 0; }
-  if (action === "run" && [2, 3].includes(rest.length)) return runBinding(rest[0], rest[1], { workOrderId: rest[2] });
+  if (action === "run" && [2, 3].includes(rest.length)) return runBinding(rest[0], rest[1], rest[2] === undefined || rest[2].startsWith("wko_") ? { workOrderId: rest[2] } : { task: rest[2] });
   if (action === "unlock" && rest.length === 2 && rest[0] === "--dir") { unlock(rest[1]); return 0; }
   if (action === "unpair" && rest.length === 2 && rest[0] === "--dir") {
     const dir = realpathSync(resolve(rest[1]));

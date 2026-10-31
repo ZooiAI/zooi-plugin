@@ -33,6 +33,7 @@ One pass over everything that is due, in zooi's order (design: interrupted work 
    - **Done:** pull requests opened, plans submitted or applied, readings drafted.
    - **Waiting for the person:** each item with its `review_url`, and that readings are confirmed in zooi.ai.
    - **Skipped:** anything you skipped and why, and any request another run holds.
+   - **Data:** call `get_data_setup` once. If a `required` need has no `metric_key` and no proposal waits, say which numbers are missing and offer `/zooi:connect` (in Codex, `$zooi:connect`); never connect anything in a run.
 
 If zooi is unreachable or the connection is not authorized, stop and say so: the person reconnects the `zooi` server (in Claude Code, `/mcp`). Do nothing that needs zooi without it.
 

@@ -42,7 +42,7 @@ to zooi; the CLI still needs its own authenticated MCP connection.
 
 ## Launch
 
-`zooi://run/<id>?key=<capability>&host=claude|codex[&work_order=wko_…]`
+`zooi://run/<id>?key=<capability>&host=claude|codex[&work_order=wko_…|&task=data_setup]`
 
 New installers add `"work_orders": true` to the pairing object. Browsers accept
 old pairings for whole-product runs; a single-action launch requires this flag.
@@ -52,17 +52,23 @@ most once, and matches `^wko_[a-z0-9]{1,64}$`; it is only an object identifier,
 never a prompt. The agent still reads and claims that order through MCP, whose
 product scope, approval, authorship and lease checks remain authoritative.
 
+Installers from plugin 0.1.23 also add `"tasks": ["data_setup"]`. `task` names
+one fixed task, never a prompt: `data_setup` starts the fixed `zooi:connect`
+skill, which reads the product's data setup through MCP. A URL carries a
+`work_order` or a `task`, never both. Browsers offer a task launch only to a
+pairing that lists it; an older pairing is updated and paired again.
+
 No other or repeated parameters, credentials, port, path segments or fragment
 are accepted. A URL cannot set an endpoint, path, command, prompt or permission
 flag. The launcher checks the capability in constant time, the host binding,
 the canonical repository path, and the product and endpoint in its current
 root `.zooi/project.json` before opening Terminal. Terminal receives only the
-local binding id, host and optional validated work order id; the capability and incoming URL never appear in
+local binding id, host and optional validated work order id or task; the capability and incoming URL never appear in
 its command, the agent's environment, or its prompt.
 
 The launcher passes `/zooi:run` to interactive `claude` or `$zooi:run` to
 interactive `codex --sandbox workspace-write` (or the fixed `zooi:do` skill
-with the validated work order id for a single-action launch), as an initial prompt, without
+with the validated work order id for a single-action launch, or the task's fixed skill), as an initial prompt, without
 a shell between the launcher and CLI. Existing CLI permission and login
 settings apply. The reminder's optional read token is removed from the
 environment. A local exclusive lock lasts for the CLI session, across both

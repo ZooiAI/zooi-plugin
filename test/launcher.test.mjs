@@ -148,6 +148,31 @@ test("an action launch selects only the do skill and validated work order in eit
   assert.throws(() => authorize(`${f.href()}&work_order=wko_a&work_order=wko_b`, f.root), /launcher_url_invalid/);
 });
 
+test("a task launch selects only its fixed skill: data setup starts zooi:connect", async (t) => {
+  const f = fixture(t), started = [];
+  assert.deepEqual(f.result.pairing.tasks, ["data_setup"]);
+  const run = (command, args, options) => {
+    started.push({ command, args, options });
+    const child = new EventEmitter();
+    queueMicrotask(() => child.emit("exit", 0));
+    return child;
+  };
+  for (const host of ["codex", "claude"]) {
+    const url = `${f.href(host)}&task=data_setup`;
+    assert.equal(authorize(url, f.root).task, "data_setup");
+    const calls = [];
+    openUrl(url, { root: f.root, exec: (...args) => calls.push(args) });
+    assert.ok(calls[0][2].input.includes("data_setup") && !calls[0][2].input.includes(f.result.pairing.key));
+    await runBinding(f.result.pairing.id, host, { root: f.root, run, task: "data_setup" });
+  }
+  assert.deepEqual(started.map((s) => s.args), [["--sandbox", "workspace-write", "$zooi:connect"], ["/zooi:connect"]]);
+  for (const task of ["", "run", "data_setup /zooi:run", "constructor", "__proto__"]) {
+    assert.throws(() => authorize(`${f.href()}&task=${encodeURIComponent(task)}`, f.root), /launcher_task_invalid/);
+    await assert.rejects(runBinding(f.result.pairing.id, "codex", { root: f.root, run: () => assert.fail("must not spawn"), task }), /launcher_task_invalid/);
+  }
+  assert.throws(() => authorize(`${f.href()}&task=data_setup&work_order=wko_a`, f.root), /launcher_url_invalid/);
+});
+
 test("simultaneous clicks, even across hosts and website origins, never start a second CLI", async (t) => {
   const f = fixture(t);
   const second = install({ ...f.options, webOrigin: "http://127.0.0.1:5180" }).pairing;
