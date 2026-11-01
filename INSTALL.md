@@ -1,6 +1,6 @@
 # Install zooi.ai in your agent
 
-zooi.ai turns the agent you already use into a growth team for your product. zooi keeps the product's memory, data, methods, rules and measurement. Your agent does the work, and you approve what goes out. This package works with **Claude Code** and **Codex**.
+zooi.ai turns the agent you already use into a growth team for your product. zooi keeps the product's memory, data, methods, rules and measurement. Your agent does the work, and you approve what goes out. This package works with **Claude Code** and **Codex**. For a cloud agent that cannot install it, such as OpenAI dots or Grok Bot, see [CLOUD.md](CLOUD.md).
 
 ## Before you start
 

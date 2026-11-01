@@ -5,7 +5,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathS
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { authorize, handlerSource, install, openUrl, origin, presentPairing, registerApp, runBinding, shellQuote, unlock } from "../zooi/scripts/launcher.mjs";
+import { appLink, authorize, detectApp, handlerSource, install, openUrl, origin, presentPairing, registerApp, runBinding, shellQuote, unlock } from "../zooi/scripts/launcher.mjs";
 
 function fixture(t) {
   const top = realpathSync(mkdtempSync(join(tmpdir(), "zooi-launcher-")));
@@ -17,7 +17,7 @@ function fixture(t) {
   relink();
   for (const name of ["claude", "codex"]) { writeFileSync(join(bin, name), "#!/bin/sh\nexit 0\n"); chmodSync(join(bin, name), 0o700); }
   const registered = [];
-  const options = { dir, root, app, platform: "darwin", env: { PATH: bin }, register: (value) => registered.push(value) };
+  const options = { dir, root, app, platform: "darwin", env: { PATH: bin }, register: (value) => registered.push(value), detect: () => null };
   const result = install(options);
   const href = (host = "codex", key = result.pairing.key, id = result.pairing.id) => `zooi://run/${id}?key=${key}&host=${host}`;
   return { top, dir, bin, root, options, result, href, registered, relink };
@@ -219,6 +219,57 @@ test("the actual child receives the fixed prompt without shell expansion", async
     assert.deepEqual(targeted.args, host === "codex" ? ["--sandbox", "workspace-write", "$zooi:do wko_target123"] : ["/zooi:do wko_target123"]);
     assert.equal(targeted.cwd, f.dir);
   }
+});
+
+test("an installed desktop app is preferred: it opens the paired folder with the fixed skill pre-filled", async (t) => {
+  const f = fixture(t);
+  const installed = { claude: "/Applications/Claude.app", codex: "/Applications/Codex.app" };
+  const p = install({ ...f.options, detect: (host) => installed[host] }).pairing;
+  assert.deepEqual(p.apps, ["claude", "codex"]);
+  assert.doesNotMatch(JSON.stringify(p), /repo with|Applications/);
+  const href = (host, extra = "") => `zooi://run/${p.id}?key=${p.key}&host=${host}${extra}`;
+  const links = [];
+  const open = (host, extra) => {
+    const calls = [];
+    assert.equal(openUrl(href(host, extra), { root: f.root, exec: (...args) => calls.push(args), detect: (name) => installed[name] }), "app");
+    assert.equal(calls.length, 1); assert.equal(calls[0][0], "/usr/bin/open");
+    assert.ok(!calls[0][1][0].includes(p.key) && !calls[0][1][0].includes("zooi://"));
+    links.push(calls[0][1][0]);
+  };
+  open("claude"); open("codex"); open("codex", "&work_order=wko_abc1"); open("claude", "&task=data_setup");
+  const claude = new URL(links[0]), codex = new URL(links[1]);
+  assert.equal(`${claude.protocol}//${claude.host}${claude.pathname}`, "claude://code/new");
+  assert.deepEqual([claude.searchParams.get("folder"), claude.searchParams.get("q")], [f.dir, "/zooi:run"]);
+  assert.equal(`${codex.protocol}//${codex.host}${codex.pathname}`, "codex://threads/new");
+  assert.deepEqual([codex.searchParams.get("path"), codex.searchParams.get("prompt")], [f.dir, "$zooi:run"]);
+  assert.equal(new URL(links[2]).searchParams.get("prompt"), "$zooi:do wko_abc1");
+  assert.equal(new URL(links[3]).searchParams.get("q"), "/zooi:connect");
+  // Spaces stay %20: the apps decode percent escapes, not form encoding.
+  assert.ok(!links.some((link) => link.includes("+")));
+  // The app was removed after pairing: fall back to the CLI in Terminal.
+  const calls = [];
+  assert.equal(openUrl(href("codex"), { root: f.root, exec: (...args) => calls.push(args), detect: () => null }), "terminal");
+  assert.equal(calls[0][0], "/usr/bin/osascript");
+  // A CLI session already running in this repository also blocks the app.
+  const child = new EventEmitter();
+  const running = runBinding(p.id, "claude", { root: f.root, run: () => child });
+  assert.throws(() => openUrl(href("codex"), { root: f.root, exec: () => assert.fail("must not open"), detect: (name) => installed[name] }), /launcher_already_running/);
+  child.emit("exit", 0); await running;
+});
+
+test("app-only hosts pair without a CLI; --surface terminal keeps Terminal; other handlers are not the app", (t) => {
+  const f = fixture(t);
+  const p = install({ ...f.options, env: { PATH: "." }, detect: (host) => host === "claude" ? "/Applications/Claude.app" : null }).pairing;
+  assert.deepEqual([p.hosts, p.apps], [["claude"], ["claude"]]);
+  assert.throws(() => openUrl(`zooi://run/${p.id}?key=${p.key}&host=claude`, { root: f.root, exec: () => assert.fail("no CLI"), detect: () => null }), /launcher_cli_missing/);
+  const terminal = install({ ...f.options, surface: "terminal", detect: () => "/Applications/Claude.app" }).pairing;
+  assert.equal(terminal.apps, undefined);
+  assert.throws(() => install({ ...f.options, surface: "browser" }), /launcher_surface_invalid/);
+  assert.equal(detectApp("claude", { platform: "darwin", exec: () => "/Applications/Other.app\n" }), null);
+  assert.equal(detectApp("claude", { platform: "linux", exec: () => assert.fail("not macOS") }), null);
+  assert.equal(detectApp("bash", { platform: "darwin", exec: () => assert.fail("unknown host") }), null);
+  assert.throws(() => appLink("claude", "relative/dir"), /launcher_repository_changed/);
+  assert.throws(() => appLink("claude", f.dir, { workOrderId: "wko_$(id)" }), /launcher_work_order_invalid/);
 });
 
 test("macOS compiles the real URL handler with quoted paths and a valid URL scheme plist", { skip: process.platform !== "darwin" }, (t) => {

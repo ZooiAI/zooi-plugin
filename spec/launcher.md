@@ -58,6 +58,11 @@ skill, which reads the product's data setup through MCP. A URL carries a
 `work_order` or a `task`, never both. Browsers offer a task launch only to a
 pairing that lists it; an older pairing is updated and paired again.
 
+Installers from plugin 0.1.25 may add `"apps": ["claude", "codex"]`, a
+non-empty subset of `hosts` whose desktop app opens instead of Terminal (see
+Surfaces). It only changes what the web page tells the person to expect; the
+launch URL is the same.
+
 No other or repeated parameters, credentials, port, path segments or fragment
 are accepted. A URL cannot set an endpoint, path, command, prompt or permission
 flag. The launcher checks the capability in constant time, the host binding,
@@ -73,6 +78,32 @@ a shell between the launcher and CLI. Existing CLI permission and login
 settings apply. The reminder's optional read token is removed from the
 environment. A local exclusive lock lasts for the CLI session, across both
 hosts and different browser origins. The CLI's exit code is preserved.
+
+## Surfaces
+
+`install --surface app` (the default from plugin 0.1.25) records, per enabled
+host, whether that host's desktop app is installed: macOS must resolve the
+documented deep link (`claude://code/new`, `codex://threads/new`) to the
+vendor's `Claude.app` or `Codex.app`. A host whose app is installed may be
+paired without its CLI. `--surface terminal` keeps the Terminal path for every
+host. At launch, after every check above, a host paired with its app opens
+that app if macOS still resolves it, and otherwise falls back to the pinned
+CLI in Terminal (`launcher_cli_missing` if there is none):
+
+- Claude: `claude://code/new?folder=<paired directory>&q=<skill>`
+- Codex: `codex://threads/new?path=<paired directory>&prompt=<skill>`
+
+`<skill>` is the same fixed skill text Terminal would send (`/zooi:run`,
+`$zooi:do wko_…`, …), percent-encoded. The directory is the binding's canonical
+path, never browser input. Both apps only pre-fill the prompt and the person
+presses Send; Claude also asks the person to confirm the folder every time. The
+app's own permission mode, sandbox and sign-in apply, so `--sandbox
+workspace-write` is not passed to Codex, and the app must have the zooi plugin
+and an authenticated MCP connection of its own (Claude Code's desktop app and
+Codex's app read the same user configuration as their CLIs). The launcher exits
+once the app has the link, so it holds no lock for an app session; a running
+Terminal session (or a stale lock) still blocks an app launch, and duplicate
+work is otherwise stopped by MCP run-request reports and work-order leases.
 
 Requesting a launch is not proof the app opened or the run started. The web
 UI waits for the agent's normal MCP `report_run_request` updates, or

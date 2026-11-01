@@ -2,7 +2,7 @@
 
 The agent side of zooi.ai: skills and local entry points for Claude Code and Codex. zooi keeps the product's memory, data, methods, rules and measurement; your agent does the work, and you approve what goes out.
 
-Install from the public Git marketplace [`ZooiAI/zooi-plugin`](https://github.com/ZooiAI/zooi-plugin). See [INSTALL.md](INSTALL.md) for connection and onboarding, [LAUNCHER.md](LAUNCHER.md) for one-click web runs on macOS, and [SCHEDULING.md](SCHEDULING.md) for optional schedules. Growth playbooks are delivered through the authenticated MCP connection, not bundled here.
+Install from the public Git marketplace [`ZooiAI/zooi-plugin`](https://github.com/ZooiAI/zooi-plugin). See [INSTALL.md](INSTALL.md) for connection and onboarding, [CLOUD.md](CLOUD.md) for cloud agents that cannot install a plugin (OpenAI dots, Grok Bot; experimental), [LAUNCHER.md](LAUNCHER.md) for one-click web runs on macOS, and [SCHEDULING.md](SCHEDULING.md) for optional schedules. Growth playbooks are delivered through the authenticated MCP connection, not bundled here.
 
 ```bash
 # Claude Code
@@ -43,6 +43,7 @@ plugin/
     LAUNCHER.md                     launcher setup instructions, also available in the host's plugin cache
   test/                             tests for the hook script; not shipped
   INSTALL.md                        the design partners' guide, shipped in the package
+  CLOUD.md                          connecting a cloud agent through remote MCP and the skill texts, without the plugin
   SCHEDULING.md                     how to run zooi on a schedule, shipped in the package
   LAUNCHER.md                       install, pair, recover and revoke one-click web runs on macOS
 ```

@@ -1,19 +1,28 @@
 // An opt-in macOS URL handler (design/architecture.md §3.1). A browser can
 // request only the fixed run skill in a repository paired on this machine.
 // No listener, model calls, account credentials, or URL-supplied commands.
+// When the person's Claude or Codex desktop app is installed, the launch opens
+// that app in the paired repository with the skill pre-filled; otherwise it
+// starts the CLI in Terminal (plugin/spec/launcher.md, "Surfaces").
 import { execFileSync, spawn } from "node:child_process";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { accessSync, chmodSync, constants, copyFileSync, existsSync, linkSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { agentCommand, agentEnv, TASK_SKILLS } from "./agent-command.mjs";
+import { agentCommand, agentEnv, skillPrompt, TASK_SKILLS } from "./agent-command.mjs";
 
 const LAUNCHER_ROOT = join(homedir(), "Library", "Application Support", "zooi", "launcher");
 const APP = join(homedir(), "Applications", "zooi.ai Launcher.app");
 const ID = /^[a-f0-9]{32}$/;
 const KEY = /^[a-f0-9]{64}$/;
 const HOSTS = ["claude", "codex"];
+const SURFACES = ["app", "terminal"];
+/** Each desktop app's documented new-session deep link and the bundle that must handle it. */
+const APPS = {
+  claude: { probe: "claude://code/new", bundle: "Claude.app" },
+  codex: { probe: "codex://threads/new", bundle: "Codex.app" },
+};
 const fail = (code) => { throw new Error(code); };
 const json = (file) => JSON.parse(readFileSync(file, "utf8"));
 const privateDir = (path) => { mkdirSync(path, { recursive: true, mode: 0o700 }); chmodSync(path, 0o700); };
@@ -60,6 +69,28 @@ export function executable(command, env = process.env) {
 export const shellQuote = (value) => `'${value.replaceAll("'", "'\\''")}'`;
 const appleQuote = (value) => JSON.stringify(value);
 
+/** The app macOS would open for a host's deep link, or null. Only the vendor's app bundle counts. */
+export function detectApp(host, { exec = execFileSync, platform = process.platform } = {}) {
+  if (platform !== "darwin" || !Object.hasOwn(APPS, host)) return null;
+  const script = `ObjC.import("AppKit"); const u = $.NSWorkspace.sharedWorkspace.URLForApplicationToOpenURL($.NSURL.URLWithString(${JSON.stringify(APPS[host].probe)})); u.isNil() ? "" : u.path.js`;
+  try {
+    const path = String(exec("/usr/bin/osascript", ["-l", "JavaScript", "-e", script], { stdio: ["ignore", "pipe", "ignore"] })).trim();
+    return path.endsWith(`/${APPS[host].bundle}`) && existsSync(path) ? path : null;
+  } catch { return null; }
+}
+
+/**
+ * The app's own new-session link: the paired directory and the fixed skill, pre-filled, never sent.
+ * The app asks the person to confirm the folder (Claude) and to press Send.
+ */
+export function appLink(host, dir, options = {}) {
+  if (!isAbsolute(dir)) fail("launcher_repository_changed");
+  const prompt = encodeURIComponent(skillPrompt(host, options));
+  if (host === "claude") return `claude://code/new?folder=${encodeURIComponent(dir)}&q=${prompt}`;
+  if (host === "codex") return `codex://threads/new?path=${encodeURIComponent(dir)}&prompt=${prompt}`;
+  fail("launcher_host_invalid");
+}
+
 /** The URL is a shell argument only, quoted by AppleScript, and is never shown in Terminal. */
 export function handlerSource(node, script) {
   const command = `${shellQuote(node)} ${shellQuote(script)} open-url `;
@@ -80,15 +111,20 @@ export function registerApp({ node, script, app, exec = execFileSync }) {
 }
 
 /** Installation is explicit. Re-pairing rotates the capability, invalidating old browser links. */
-export function install({ dir, webOrigin, host, setupId, root = LAUNCHER_ROOT, app = APP, platform = process.platform, env = process.env, register = registerApp } = {}) {
+export function install({ dir, webOrigin, host, setupId, surface = "app", root = LAUNCHER_ROOT, app = APP, platform = process.platform, env = process.env, register = registerApp, detect = (name) => detectApp(name, { platform }) } = {}) {
   if (platform !== "darwin") fail("launcher_macos_required");
   if (setupId !== undefined && !ID.test(setupId)) fail("launcher_setup_invalid");
+  if (!SURFACES.includes(surface)) fail("launcher_surface_invalid");
   const repository = realpathSync(resolve(dir ?? process.cwd()));
   const link = project(repository);
   const web = origin(webOrigin ?? link.endpoint);
   if (host && !HOSTS.includes(host)) fail("launcher_host_invalid");
-  const commands = Object.fromEntries((host ? [host] : HOSTS).map((name) => [name, executable(name, env)]).filter(([, file]) => file));
-  if (!Object.keys(commands).length || (host && !commands[host])) fail("launcher_cli_missing");
+  const wanted = host ? [host] : HOSTS;
+  const commands = Object.fromEntries(wanted.map((name) => [name, executable(name, env)]).filter(([, file]) => file));
+  // Prefer the desktop app where it is installed; the CLI remains the fallback.
+  const apps = surface === "app" ? wanted.filter((name) => detect(name)) : [];
+  const hosts = HOSTS.filter((name) => commands[name] || apps.includes(name));
+  if (!hosts.length || (host && !hosts.includes(host))) fail("launcher_cli_missing");
   privateDir(root);
   privateDir(join(root, "locks"));
   const installedScript = join(root, "launcher.mjs");
@@ -98,10 +134,10 @@ export function install({ dir, webOrigin, host, setupId, root = LAUNCHER_ROOT, a
   }
   const current = state(root);
   const previous = current.bindings.find((binding) => binding.product_id === link.product_id && binding.endpoint === link.endpoint && binding.origin === web);
-  const binding = { id: previous?.id ?? randomBytes(16).toString("hex"), key: randomBytes(32).toString("hex"), ...link, origin: web, dir: repository, commands };
+  const binding = { id: previous?.id ?? randomBytes(16).toString("hex"), key: randomBytes(32).toString("hex"), ...link, origin: web, dir: repository, commands, apps };
   register({ node: process.execPath, script: installedScript, app });
   save(root, { ...current, bindings: [...current.bindings.filter((entry) => entry.id !== binding.id), binding] });
-  const pairing = { schema: "zooi.launcher/1", id: binding.id, key: binding.key, product_id: binding.product_id, origin: web, hosts: Object.keys(commands), work_orders: true, tasks: Object.keys(TASK_SKILLS) };
+  const pairing = { schema: "zooi.launcher/1", id: binding.id, key: binding.key, product_id: binding.product_id, origin: web, hosts, work_orders: true, tasks: Object.keys(TASK_SKILLS), ...(apps.length ? { apps } : {}) };
   return { pairing, url: `${web}/settings/products/${encodeURIComponent(link.product_id)}/agent#zooi-launcher=${encodeURIComponent(JSON.stringify(pairing))}${setupId ? `&setup=${setupId}` : ""}` };
 }
 
@@ -120,7 +156,7 @@ export function authorize(value, root = LAUNCHER_ROOT) {
   if (task !== undefined && !Object.hasOwn(TASK_SKILLS, task)) fail("launcher_task_invalid");
   if (!KEY.test(key ?? "") || !HOSTS.includes(host)) fail("launcher_url_invalid");
   const binding = state(root).bindings.find((entry) => entry.id === id);
-  if (!binding || !KEY.test(binding.key) || !timingSafeEqual(Buffer.from(binding.key, "hex"), Buffer.from(key, "hex")) || !binding.commands[host]) fail("launcher_pairing_invalid");
+  if (!binding || !KEY.test(binding.key) || !timingSafeEqual(Buffer.from(binding.key, "hex"), Buffer.from(key, "hex")) || !(binding.commands[host] || binding.apps?.includes(host))) fail("launcher_pairing_invalid");
   verifyProject(binding);
   return { binding, host, workOrderId, task };
 }
@@ -131,11 +167,22 @@ function verifyProject(binding) {
   if (link.product_id !== binding.product_id || link.endpoint !== binding.endpoint) fail("launcher_repository_changed");
 }
 
-/** Terminal receives the local binding id and host, never the capability or any external text. */
-export function openUrl(value, { root = LAUNCHER_ROOT, exec = execFileSync } = {}) {
+/**
+ * A paired desktop app receives the paired directory and the fixed skill; Terminal receives
+ * the local binding id and host. Neither receives the capability or any external text.
+ */
+export function openUrl(value, { root = LAUNCHER_ROOT, exec = execFileSync, detect = detectApp, isAlive = alive } = {}) {
   const { binding, host, workOrderId, task } = authorize(value, root);
+  if (binding.apps?.includes(host) && detect(host)) {
+    // The app's session outlives this handler, so no lock is held; a running CLI session still blocks it.
+    assertIdle(binding, root, isAlive);
+    exec("/usr/bin/open", [appLink(host, binding.dir, { workOrderId, task })], { stdio: "pipe" });
+    return "app";
+  }
+  if (!binding.commands[host]) fail("launcher_cli_missing");
   const command = [process.execPath, join(root, "launcher.mjs"), "run", binding.id, host, ...(workOrderId ? [workOrderId] : task ? [task] : [])].map(shellQuote).join(" ");
   exec("/usr/bin/osascript", ["-"], { input: `tell application "Terminal"\n  activate\n  do script ${appleQuote(command)}\nend tell\n`, stdio: ["pipe", "pipe", "pipe"] });
+  return "terminal";
 }
 
 const lockFile = (binding, root) => join(root, "locks", `${createHash("sha256").update(JSON.stringify([binding.endpoint, binding.product_id, binding.dir])).digest("hex")}.json`);
@@ -167,6 +214,15 @@ function lock(binding, root, isAlive) {
   } finally { rmSync(candidate, { force: true }); }
 }
 
+function assertIdle(binding, root, isAlive) {
+  const file = lockFile(binding, root);
+  if (!existsSync(file)) return;
+  let previous;
+  try { previous = json(file); } catch { fail("launcher_already_running"); }
+  if (!Number.isSafeInteger(previous.pid) || previous.pid <= 0 || isAlive(previous.pid) || (previous.child_pid && isAlive(previous.child_pid))) fail("launcher_already_running");
+  fail("launcher_stale_lock");
+}
+
 export function unlock(dir, { root = LAUNCHER_ROOT, isAlive = alive } = {}) {
   const repository = realpathSync(resolve(dir));
   const binding = state(root).bindings.find((entry) => entry.dir === repository);
@@ -183,7 +239,8 @@ export async function runBinding(id, host, { root = LAUNCHER_ROOT, run = spawn, 
   if (workOrderId !== undefined && !/^wko_[a-z0-9]{1,64}$/.test(workOrderId)) fail("launcher_work_order_invalid");
   if (task !== undefined && (workOrderId !== undefined || !Object.hasOwn(TASK_SKILLS, task))) fail("launcher_task_invalid");
   const binding = state(root).bindings.find((entry) => entry.id === id);
-  if (!binding?.commands[host]) fail("launcher_pairing_invalid");
+  if (!binding) fail("launcher_pairing_invalid");
+  if (!binding.commands[host]) fail("launcher_cli_missing");
   verifyProject(binding);
   const held = lock(binding, root, isAlive);
   try {
@@ -218,9 +275,9 @@ export function presentPairing(result, { root = LAUNCHER_ROOT, open = (url) => e
 export async function main(args = process.argv.slice(2)) {
   const [action, ...rest] = args;
   if (action === "install") {
-    if (rest.length % 2 || rest.some((value, i) => i % 2 === 0 && !["--dir", "--web-origin", "--host", "--setup-id"].includes(value)) || new Set(rest.filter((_, i) => i % 2 === 0)).size !== rest.length / 2) fail("launcher_options_invalid");
+    if (rest.length % 2 || rest.some((value, i) => i % 2 === 0 && !["--dir", "--web-origin", "--host", "--setup-id", "--surface"].includes(value)) || new Set(rest.filter((_, i) => i % 2 === 0)).size !== rest.length / 2) fail("launcher_options_invalid");
     const options = Object.fromEntries(Array.from({ length: rest.length / 2 }, (_, i) => [rest[i * 2], rest[i * 2 + 1]]));
-    const result = install({ dir: options["--dir"], webOrigin: options["--web-origin"], host: options["--host"], setupId: options["--setup-id"] });
+    const result = install({ dir: options["--dir"], webOrigin: options["--web-origin"], host: options["--host"], setupId: options["--setup-id"], surface: options["--surface"] });
     presentPairing(result);
     return 0;
   }

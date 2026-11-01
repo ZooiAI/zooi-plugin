@@ -1,16 +1,20 @@
 # Run from the web with one click (macOS)
 
 The optional local launcher lets the inbox's **Run with Claude Code** or
-**Run with Codex** button start your CLI immediately in Terminal. You can
+**Run with Codex** button start your agent in the paired repository. If the
+Claude or Codex desktop app is installed, it opens that app with the skill
+filled in; otherwise it starts your CLI immediately in Terminal. You can
 watch its progress, answer tool permissions and stop it there. zooi does not
 host the agent or handle your Claude or ChatGPT credentials.
 
 ## Install once
 
 You need macOS, Node.js 22.19 or later, and at least one of `claude` and
-`codex` on your PATH. Install the zooi plugin in that **CLI**, authenticate its
-MCP connection and run onboarding first. A desktop-app connection alone is
-not a substitute for a working CLI connection.
+`codex` on your PATH or the Claude or Codex desktop app. Install the zooi
+plugin where you will run it, authenticate its MCP connection and run
+onboarding first. The desktop apps read the same user configuration as their
+CLIs; if the app does not offer `/zooi:run` (Claude) or `$zooi:run` (Codex),
+install the plugin and sign in to its MCP connection there too.
 
 From your product's repository, using this plugin's actual location:
 
@@ -28,6 +32,8 @@ endpoint. Do not run a growth task as part of installation.
 - The web origin defaults to `.zooi/project.json`'s endpoint. If the web UI is
   elsewhere, add `--web-origin https://your-zooi.example`. For local
   development, this can be `--web-origin http://127.0.0.1:5180`.
+- An installed desktop app is preferred. Add `--surface terminal` to always
+  use the CLI in Terminal. Install again after adding or removing an app.
 - No `sudo`, background service, open port or read token is needed.
 
 The installer creates `~/Applications/zooi.ai Launcher.app`, registers
@@ -53,8 +59,12 @@ plugin installation, MCP sign-in, repository linking and launcher setup.
 In the inbox's run notice, or under Settings → your product → Agent and runs,
 click **Run with Claude Code** or **Run with Codex**. Allow the browser to
 open zooi.ai. The first run may also require macOS permission to control
-Terminal. The initial skill prompt is sent automatically; login, repository
-trust and tool approvals may still need your input. Existing plan approvals
+Terminal. In Terminal the initial skill prompt is sent automatically; login,
+repository trust and tool approvals may still need your input. In a desktop
+app the new session opens on the paired repository with the skill filled in:
+Claude asks you to confirm the folder, and in both apps you press Send. Use
+the app's local mode in that folder, not a worktree or cloud environment; the
+app's own permission mode and Codex sandbox setting apply. Existing plan approvals
 and reading confirmations stay in zooi, and the agent reports progress through
 MCP as usual.
 
@@ -68,7 +78,10 @@ the page offers that setup and a copyable task in the meantime.
 
 The CLI runs interactively. Exit that session before starting another run
 for the same product in the same repository. Repeated clicks cannot start a
-second agent, including when you choose the other CLI. The browser cannot
+second Terminal agent, including when you choose the other CLI, and a running
+Terminal session also blocks opening the app. The launcher cannot see an app
+session, so do not send the same run twice there; zooi still lets only one
+agent claim each action. The browser cannot
 verify that macOS accepted a launch; inspect Terminal if nothing changes.
 
 ## Recover or revoke
@@ -88,7 +101,7 @@ node "$HOME/Library/Application Support/zooi/launcher/launcher.mjs" uninstall
 
 Removing the pairing on the web clears only that browser's copy. Run the
 installer again to rotate its key, update the runtime, change the selected
-CLIs or rebind a moved/relinked repository; then complete the new browser pairing.
+CLIs or apps, or rebind a moved/relinked repository; then complete the new browser pairing.
 Removing the launcher does not stop an existing CLI session or revoke MCP.
 
 **Scope of this release:** macOS only. Windows and Linux can continue to use
