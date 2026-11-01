@@ -19,7 +19,7 @@ codex plugin add zooi@zooi
 - **No control-plane code.** Nothing here imports from `apps/`, `packages/` or `@zooi/*`; `node scripts/check-boundaries.ts` enforces it.
 - **MCP only.** The plugin reaches zooi through the protocol in [`spec/mcp.md`](spec/mcp.md) and the data formats kept in `spec/`, which the control plane tests against.
 - **No credentials in the package.** Authorization comes from the agent's MCP connection (OAuth); `node scripts/check-plugin.ts` refuses anything that looks like a token.
-- **Public distribution, no open-source license yet.** This repository contains only the generic plugin and protocol descriptions. The control plane is maintained separately; publication does not grant an open-source license.
+- **Apache-2.0.** This repository (the generic plugin, its skills, hooks, scripts, templates and the protocol descriptions) is licensed under the Apache License 2.0 (`LICENSE`, `NOTICE`; decided 2026-11-01). The zooi.ai control plane is a separate, hosted service and is not covered; the plugin needs a zooi.ai account to do anything.
 
 ## Layout
 
