@@ -67,12 +67,17 @@ export function safeEndpoint(url) {
   }
 }
 
-/** One stateless MCP call to `get_due_summary`; anything unexpected is no answer. */
-export async function fetchSummary({ endpoint, token, productId, fetch = globalThis.fetch }) {
+/**
+ * One stateless MCP call to `get_due_summary`; anything unexpected is no answer.
+ * A schedule asking on the person's behalf passes `wakeup` (its kind and the
+ * engine it starts), so zooi can show that the product runs on its own; the
+ * session reminder passes nothing.
+ */
+export async function fetchSummary({ endpoint, token, productId, wakeup, fetch = globalThis.fetch }) {
   const response = await fetch(`${endpoint}/mcp`, {
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json", accept: "application/json, text/event-stream" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_due_summary", arguments: { product_id: productId } } }),
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_due_summary", arguments: { product_id: productId, ...(wakeup ? { wakeup } : {}) } } }),
     signal: AbortSignal.timeout(5000),
   });
   if (!response.ok) return null;

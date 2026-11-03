@@ -9,7 +9,7 @@ A reading says what an action did, judged by the measurement plan fixed when it 
 
 ## Steps
 
-1. **Find what is due.** Call `get_due` and read `readings_due` and `campaigns_due`. Each `readings_due` entry names the `action`, its `campaign_id`, and an open `draft` if one exists; each `campaigns_due` entry names the `campaign_id`, its `window_start` and whether it has `matured`. Nothing due: say so and stop.
+1. **Find what is due.** Call `get_due` and read `readings_due` and `campaigns_due`. Given an action or campaign id by the session that dispatched you, `get_object` on it shows its measurement, metric and receipts by id. Each `readings_due` entry names the `action`, its `campaign_id`, and an open `draft` if one exists; each `campaigns_due` entry names the `campaign_id`, its `window_start` and whether it has `matured`. Nothing due: say so and stop.
 2. **Read the evidence.** For each action:
    - Call `get_results` for its measurement plan and window.
    - Call `query_metrics` for its primary metric over the baseline and the window.

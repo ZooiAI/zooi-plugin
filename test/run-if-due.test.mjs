@@ -70,3 +70,14 @@ test("setup problems fail visibly, and the token never leaves for another addres
   const down = async () => new Response("", { status: 503 });
   assert.equal(await main({ env: { ZOOI_READ_TOKEN: "t" }, args: [`--dir=${repo()}`], fetch: down, run: fakeRun().run, log: quiet }), 2);
 });
+
+test("a real check tells zooi it comes from a scheduler and which engine it starts; a dry run says nothing", async () => {
+  const dir = repo();
+  const bodies = [];
+  const fetch = async (url, init) => { bodies.push(JSON.parse(init.body).params.arguments); return answer(summary([]))(); };
+  assert.equal(await main({ env: { ZOOI_READ_TOKEN: "t" }, args: ["--host=codex", `--dir=${dir}`], fetch, run: fakeRun().run, log: quiet }), 0);
+  assert.deepEqual(bodies, [{ product_id: "prd_1", wakeup: { kind: "scheduler", engine: "codex" } }]);
+  bodies.length = 0;
+  assert.equal(await main({ env: { ZOOI_READ_TOKEN: "t" }, args: ["--host=claude", `--dir=${dir}`, "--dry-run"], fetch, run: fakeRun().run, log: quiet }), 0);
+  assert.deepEqual(bodies, [{ product_id: "prd_1" }], "trying the script by hand proves no schedule");
+});

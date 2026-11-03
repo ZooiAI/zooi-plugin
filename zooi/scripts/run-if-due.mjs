@@ -1,8 +1,11 @@
 // Run the person's agent only when zooi.ai has something for it (design/architecture.md
-// §2.5, plan M3 step 3g). For an operating-system scheduler (cron, launchd, Task
-// Scheduler): it asks `get_due_summary` with the person's read token and, when a run is
-// requested or approved work or readings wait, starts the agent in the linked repository.
-// Otherwise it exits without starting anything, so a frequent schedule costs no model usage.
+// §2.5, plan M3 step 3g; the default way to wake the agent since 2026-11-03). For an
+// operating-system scheduler (cron, launchd, Task Scheduler): it asks `get_due_summary`
+// with the person's read token and, when a run is requested or approved work or readings
+// wait, starts the agent in the linked repository. Otherwise it exits without starting
+// anything, so a frequent schedule (every 15 minutes, zooi's own heartbeat) costs no model
+// usage. Each real check tells zooi it came from a scheduler (`wakeup`), so the product's
+// week page can say that someone runs it; a dry run says nothing.
 //
 //   ZOOI_READ_TOKEN=… node run-if-due.mjs --host=claude|codex [--dir=<repository>] [--dry-run] [-- <agent options>]
 //
@@ -28,7 +31,8 @@ export async function check({ env = process.env, args = process.argv.slice(2), f
   const link = findLink(dir);
   if (!link) return { status: "not_linked", host };
   if (link.endpoint !== endpoint) return { status: "other_endpoint", host };
-  const summary = await fetchSummary({ endpoint, token, productId: link.productId, fetch }).catch(() => null);
+  const wakeup = args.includes("--dry-run") ? undefined : { kind: "scheduler", engine: host === "codex" ? "codex" : "claude_code" };
+  const summary = await fetchSummary({ endpoint, token, productId: link.productId, wakeup, fetch }).catch(() => null);
   if (!summary) return { status: "unreachable", host };
   const due = summary.items.filter((item) => AGENT_CODES.includes(item.code));
   return { status: due.length ? "due" : "nothing_due", host, dir, codes: due.map((item) => item.code) };

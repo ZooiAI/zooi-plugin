@@ -40,9 +40,9 @@ When this repository publishes a new version, ask your agent to read them again.
 
 zooi.ai's **Add product** page has a prompt for a cloud agent that names the product (`product_id`, website, repository). Paste it to your agent. It keeps `{ "schema": "zooi.project/1", "product_id": …, "endpoint": "https://app.zooi.ai" }` in its workspace or notes, in place of the repository file, and runs `zooi-onboard`. You confirm the facts it proposes in zooi.ai.
 
-## 4. Schedule the weekly run
+## 4. Schedule the run
 
-Ask your agent for a weekly scheduled task (dots) or routine (Grok Bot) that runs `zooi-run`, in your product's time zone, shortly after zooi's weekly run request opens (Settings › Products › Agent and runs). Ask it to message you only when something waits for you, with the link zooi gives.
+Ask your agent for a daily scheduled task (dots) or routine (Grok Bot) that runs `zooi-run scheduled`, in your product's time zone, shortly after zooi's run hour (Settings › Products › Agent and runs); on a day with nothing due it ends after one check. The word `scheduled` makes the run tell zooi it was started by a schedule, so the product's week page shows that it runs on its own (zooi.ai's SCHEDULING.md). Ask it to message you only when something waits for you, with the link zooi gives.
 
 ## 5. Keep its permissions narrow
 

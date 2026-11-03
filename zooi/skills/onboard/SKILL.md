@@ -14,7 +14,7 @@ The goal is a first useful result within minutes:
 
 Everything you submit waits for the person.
 
-**Only the profile.** When the person asks only to update the product's profile (for example from the profile's "update the profile" box, with the facts they want changed), check the connection and the link (steps 1 and 2, writing nothing new if the link exists), then do steps 4, 5 and 8 for what they asked, and hand over only the facts. Skip the walkthrough, the alternatives, the AGENTS.md section and the reminder. Their sentence says what to change, not what is true: every value still needs a citable source, and if none supports it, say so instead of proposing it.
+**Only the profile.** When the person asks only to update the product's profile (for example from the profile's "update the profile" box, with the facts they want changed), check the connection and the link (steps 1 and 2, writing nothing new if the link exists), then do steps 4, 5 and 8 for what they asked, and hand over only the facts. Skip the walkthrough, the alternatives, the AGENTS.md section, the scheduled wake-up and the reminder. Their sentence says what to change, not what is true: every value still needs a citable source, and if none supports it, say so instead of proposing it.
 
 ## Steps
 
@@ -56,18 +56,25 @@ Everything you submit waits for the person.
      - For a page, cite `{ "web_page": { "url" } }`.
    - **Numbers:** every number in a value must appear in the cited text.
    - On a refusal, fix what `reason.code` names and submit again with a new key.
-9. **Guide the person through the session reminder.** It is off by default: installing the plugin or authorizing its Agent connection does not enable it. zooi currently sends run requests and approval reminders to the inbox, not email. Before handing over, explain this and give these steps, using the `endpoint` from `list_products`:
+9. **Set up the scheduled wake-up.** zooi never starts an agent: it asks for runs, and a schedule the person set up starts you (`../../../SCHEDULING.md`, relative to this skill's folder). It is the default since 2026-11-03: a product without one shows **No scheduled wake-up** on its week page, and the inbox's run request is only a fallback. Offer the choice and help with the one the person picks:
+   - **Codex app:** when the person says so, create the automation yourself: `$zooi:run scheduled`, daily, a little after the run time they chose in zooi.ai (Settings › Products › Agent and runs), in a new worktree each time.
+   - **Claude Code Desktop:** the person creates the routine (Code tab › Routines › New routine › Local): instructions `/zooi:run scheduled`, the repository folder, the isolated worktree, daily. You cannot create it for them: give them these steps and ask them to click **Run now** once.
+   - **Their computer's scheduler:** write the cron or launchd entry that runs `run-if-due.mjs` every 15 minutes with their host, leaving a placeholder for their read token; they create the token and install the entry. Never run the script with their token, and never put a token in a file.
+   - **A cloud agent** (if you are one): your scheduled task is the schedule (the plugin's CLOUD.md, step 4); nothing more to do here.
+   - zooi marks the step done once the first scheduled run checks in; silence proves nothing. If the person declines, say **no scheduled wake-up** in the hand-over.
+10. **Guide the person through the session reminder.** It is off by default: installing the plugin or authorizing its Agent connection does not enable it. zooi currently sends run requests and approval reminders to the inbox, not email. Before handing over, explain this and give these steps, using the `endpoint` from `list_products`:
    - Open `{endpoint}/settings/tokens`. The person creates a **Read** personal token for this product, with an expiry they choose. Creating the token is their decision; never create it for them or ask them to paste its secret into the conversation.
    - **Claude Code:** the person runs `/plugin configure zooi@zooi` and enters the token in **Read-only token**, in the host's secure configuration.
    - **Codex:** the person sets `ZOOI_READ_TOKEN` privately in the environment they launch Codex from, then trusts the zooi hook in `/hooks`. Never put the secret in a command you run, a project file or shell history.
    - **Verify:** start a new session in this linked repository. If `get_due_summary` reports due items, the session-start message should show counts and the inbox link. No due items means silence; silence alone does not prove setup succeeded. Never claim the reminder is configured without the person's confirmation or an observed message.
-   - The reminder only runs when an agent session starts, and the token expires. If the person wants runs even when they do not open the agent, point to `../../../SCHEDULING.md` in this package for optional host or local scheduling. Do not install a scheduler on their behalf unless they ask. If they decline setup, say **session reminder not enabled** in the hand-over.
-10. **Hand over.**
+   - The reminder only runs when an agent session starts, and the token expires; runs while the agent is closed come from step 9's schedule. If they decline setup, say **session reminder not enabled** in the hand-over.
+11. **Hand over.**
    - **To commit:** `.zooi/project.json` and the AGENTS.md section.
    - **Facts:** the candidates you proposed; the person accepts or edits them in zooi.ai, in the product's sources review.
    - **New-user findings:** the walkthrough's top three in plain words, and where you stopped.
    - **Next:** the campaign you would make first and why, in one paragraph. Offer `/zooi:plan` to submit it.
    - **Data:** zooi now recommends the data this kind of product needs, and the inbox shows it as a data setup item. Call `get_data_setup`, name the required needs without a metric, and offer `/zooi:connect` (in Codex, `$zooi:connect`) to connect them; the person's own steps (sign-ups, keys) are part of it.
+   - **Wake-up:** which schedule was set up, and that zooi shows it on the week page after its first check-in; or that none was set up.
    - **Reminder:** whether it was verified, still needs configuration or was declined; include the token settings link and the next step when it is not ready.
    - **Numbers:** keep the walkthrough's timings out of any plan, because zooi cannot check them; report them here instead.
 
