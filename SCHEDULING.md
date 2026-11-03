@@ -60,6 +60,10 @@ Exit codes: `0` nothing due or the run finished, `2` a setup problem (no token, 
 
 OpenAI dots and Grok Bot run on their vendor's schedule, so the schedule is theirs: see [CLOUD.md](CLOUD.md), step 4. Their scheduled task runs the saved `zooi-run` skill with the word `scheduled`, and the run checks in like a routine.
 
+## Dispatch from zooi
+
+Since 2026-11-03 zooi can also send a run request to a place you set, when the request reaches its notice time: a GitHub Actions workflow in your repository, or a signed webhook that starts your agent wherever it lives. It is delivery, not a schedule of its own, and the inbox still lists the request. See [ACTIONS.md](ACTIONS.md); a run started this way says `/zooi:run dispatched` and checks in as a dispatch.
+
 ## Usage and terms
 
 A scheduled run uses your agent the same way as a run you start yourself, and counts toward your plan's usage. Anthropic's terms for Claude subscriptions assume ordinary, individual use of Claude Code; if you automate heavily, sign Claude Code in with your own API key instead. zooi never asks for, stores or routes your Claude or ChatGPT credentials. (Checked on 2026-10-15 against code.claude.com's Legal and compliance page.)

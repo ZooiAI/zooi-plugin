@@ -1,0 +1,43 @@
+# zooi.ai runs your agent on this repository's runner when zooi dispatches a run
+# request (the plugin's ACTIONS.md). Written from the documentation on 2026-11-03
+# and not yet run end to end: check each step against your setup.
+#
+# Secrets: ANTHROPIC_API_KEY (your own key) and ZOOI_AGENT_TOKEN (a zooi.ai personal
+# access token with the Agent scope for this product). GITHUB_TOKEN is the runner's own.
+name: zooi run
+on:
+  repository_dispatch:
+    types: [zooi-run]
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: zooi-run
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install Claude Code and the zooi plugin
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          claude plugin marketplace add ZooiAI/zooi-plugin
+          claude plugin install zooi@zooi
+      - name: Connect the zooi MCP server with the agent token
+        env:
+          ZOOI_AGENT_TOKEN: ${{ secrets.ZOOI_AGENT_TOKEN }}
+        run: |
+          printf '{ "mcpServers": { "zooi": { "type": "http", "url": "https://app.zooi.ai/mcp", "headers": { "Authorization": "Bearer %s" } } } }' "$ZOOI_AGENT_TOKEN" > "$RUNNER_TEMP/zooi-mcp.json"
+      - name: Run what is due
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ZOOI_RUN_REQUEST_ID: ${{ github.event.client_payload.run_request.id }}
+        run: claude -p "/zooi:run dispatched" --mcp-config "$RUNNER_TEMP/zooi-mcp.json" --permission-mode acceptEdits --max-turns 200

@@ -13,13 +13,13 @@ zooi is an object graph (2026-11-03): every object is readable by its id with `g
 
 - Read `get_due_brief` (ids and one-line summaries) instead of `get_due`, start the requests (step 1), then dispatch: each claimable work order to a subagent running `/zooi:do <work order id>`; each run request to plan to a subagent running `/zooi:plan <run request id>`; the readings to one running `/zooi:review`; open feedback to `/zooi:do` with the feedback ids. A subagent reads what it needs with `get_object` and the full lists with `get_due` only when it must; it never sees this session's context.
 - Order still holds: interrupted work and feedback first; work orders may run in parallel when they touch different repositories; planning waits for them (they change capacity and locks); readings last.
-- Keep the whole run within `agent_budget.remaining_minutes`; what you leave undone, say in the hand-over.
+- Keep the whole run within `agent_budget.remaining_minutes` and, when the person set a cap, `remaining_usd`; what you leave undone, say in the hand-over.
 - Without subagents (a cloud agent, a host that has none), do the steps below yourself, in order.
 
 ## Steps
 
 1. **Read what is due.** Call `get_due` with the `product_id`. Everything below works from this answer; call it again after a step changes the state.
-   - **Started by a schedule:** when a routine, automation or scheduled task started you (its instruction carries the word `scheduled`), pass `wakeup: { "kind": "routine", "engine": "<claude_code | codex | openai_dots | grok_bot>" }` to `get_due`, so zooi can show the person that the product runs on its own. A run the person started passes no `wakeup`.
+   - **Started by a schedule:** when a routine, automation or scheduled task started you (its instruction carries the word `scheduled`), pass `wakeup: { "kind": "routine", "engine": "<claude_code | codex | openai_dots | grok_bot>" }` to `get_due`, so zooi can show the person that the product runs on its own. When zooi dispatched the run itself (the instruction carries the word `dispatched`: a webhook or a GitHub Actions workflow started you, `ACTIONS.md`), pass `wakeup: { "kind": "dispatch", "engine": … }` instead. A run the person started passes no `wakeup`.
    - `run_requests` lists the runs zooi asks for, the nearest deadline first, each with its `kind`, `status` and reason codes. A weekly request and an off-cycle one can be open together, and this run answers all of them: call `report_run_request` with `status: "started"` for each one. Starting again from the same connection is the same start, so a request an earlier run of yours left `started` is yours to finish.
    - `run_request_taken`: another connection is running that request. Leave it to that run and name it in the hand-over; if every request comes back taken, stop and tell the person another run is under way. `run_request_closed`: it passed its deadline; drop it.
    - No request: run anyway when the person asked you to; there is just nothing to report.
@@ -43,6 +43,7 @@ zooi is an object graph (2026-11-03): every object is readable by its id with `g
    - `note`, when `today` is in `get_due`: in a few lines, what to change tomorrow and why, from the brief (which kind of post reached people, which replies went nowhere). It shows under the brief, and a number that is not in `today` is refused (`run_request_note_number_ungrounded`). One day's numbers are mostly noise: say what you would try, not what caused what.
    - `skipped`: codes for what you left of it: `plan_waiting_for_person`, `work_needs_person`, `repository_unavailable`, `nothing_due`, `connection_missing`, `other`.
    - `work_orders_delivered` and `readings_drafted` count the run's work once: on the weekly request, or on the first request when none is weekly; 0 on the others.
+   - `cost_usd`: what the whole run cost in US dollars, when your host shows it (Claude Code's `/cost`, Codex's session usage); on the same request as the counts, null elsewhere and whenever you do not know. Never guess a number: zooi counts an unreported cost as unknown, not as zero.
    - A request never started is recorded as missed, and one left started expires at its deadline, so report each even when there was nothing to do.
 8. **Keep what you learned.** When this run shows a correction that should hold from now on (the person edited every reply the same way, a plan was rejected for a reason that will recur), call `propose_rules` with the rule in one sentence, why, and the evidence. It counts only once the person keeps it, so give them its `review_url`. At most a few a week; a one-off is not a rule. Never propose one to get around a refusal.
 9. **Hand over.** In a few lines:

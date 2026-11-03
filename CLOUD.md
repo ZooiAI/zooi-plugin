@@ -44,6 +44,8 @@ zooi.ai's **Add product** page has a prompt for a cloud agent that names the pro
 
 Ask your agent for a daily scheduled task (dots) or routine (Grok Bot) that runs `zooi-run scheduled`, in your product's time zone, shortly after zooi's run hour (Settings › Products › Agent and runs); on a day with nothing due it ends after one check. The word `scheduled` makes the run tell zooi it was started by a schedule, so the product's week page shows that it runs on its own (zooi.ai's SCHEDULING.md). Ask it to message you only when something waits for you, with the link zooi gives.
 
+Since 2026-11-03 zooi can also push the run request to a signed webhook of your choice at its notice time (zooi.ai › Settings › Products › Agent and runs › Dispatch; the format is in [ACTIONS.md](ACTIONS.md)). If your agent's platform can start it from an incoming webhook, point the target there and have the run say `zooi-run dispatched`; otherwise the scheduled task above remains the way.
+
 ## 5. Keep its permissions narrow
 
 - Posting and sending stay with you. zooi gives the agent drafts and points; you publish from your own account, and on Hacker News and Stack Exchange you write the text yourself. Do not give the agent's own plugins permission to post or send for you without asking first.
