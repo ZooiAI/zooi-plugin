@@ -19,4 +19,5 @@ A product's repository says which zooi.ai product it belongs to in one file, `.z
 - **No credentials.** The file is committed with the repository, so it never holds a token, a secret or a personal detail. Authorization comes from the agent's MCP connection (OAuth) or, for the session hook only, a `read` token the person stores in the plugin's settings.
 - **Who writes it.** `/zooi:onboard` writes it after the person confirms the product, and proposes it as a change like any other file: the person reviews and commits it.
 - **A mismatch is a stop.** When the `endpoint` differs from the address the agent's MCP connection uses, or the connection cannot read `product_id`, skills stop and tell the person instead of guessing another product.
+- **An account with no repository.** A product can be an account the person grows (its `url` is the profile). The same file then sits in a folder the person chose for it, which need not be a Git repository (2026-11-03).
 - **One product per repository.** A monorepo that holds several products links the one it is onboarded for; more than one link is out of scope for version 1.
