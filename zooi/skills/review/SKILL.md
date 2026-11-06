@@ -14,6 +14,7 @@ A reading says what an action did, judged by the measurement plan fixed when it 
    - Call `get_results` for its measurement plan and window.
    - Call `query_metrics` for its primary metric over the baseline and the window.
    - Note each value's `metric_import` reference. A day nobody read is null; never count it as 0.
+   - Days after `complete_through` may still arrive. `today` is the person's today so far: never cite it or count it. When `collection.state` is `failing` or `stopped`, a missing day may be zooi's reading, not the product: say so in the explanation, and tell the person to check Insights › Data sources.
 3. **Decide the value.**
    - **Window not matured:** only `negative` or `inconclusive` are possible (`reading_window_open` otherwise). Usually you should wait.
    - **Observational:** the business metric decides `positive` or `no_signal` against the expectation. Noise, a missing baseline or days without data mean `inconclusive`.

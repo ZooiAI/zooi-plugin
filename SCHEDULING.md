@@ -62,7 +62,7 @@ OpenAI dots and Grok Bot run on their vendor's schedule, so the schedule is thei
 
 ## Dispatch from zooi
 
-Since 2026-11-03 zooi can also send a run request to a place you set, when the request reaches its notice time: a GitHub Actions workflow in your repository, or a signed webhook that starts your agent wherever it lives. It is delivery, not a schedule of its own, and the inbox still lists the request. See [ACTIONS.md](ACTIONS.md); a run started this way says `/zooi:run dispatched` and checks in as a dispatch.
+Since 2026-11-03 zooi can also send a run request to a place you set, when the request reaches its notice time: a GitHub Actions workflow in your repository, a signed webhook that starts your agent wherever it lives, or a webhook with a key, such as a Grok Bot routine's trigger (2026-11-06). It is delivery, not a schedule of its own, and the inbox still lists the request. See [ACTIONS.md](ACTIONS.md); a run started this way says `/zooi:run dispatched` and checks in as a dispatch.
 
 ## Usage and terms
 
